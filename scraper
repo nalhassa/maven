@@ -1,0 +1,54 @@
+from bs4 import BeautifulSoup
+from requests_html import HTMLSession
+import pandas as pd
+from openpyxl import Workbook
+
+Names = []
+URLs = []
+IDs = []
+Bio = []
+
+def music_scraper():
+
+    df = pd.read_csv(r'/Users/niina/Downloads/Spotify Data - Niina Artists.csv', encoding="ISO-8859-1", skiprows = [i for i in range(1,131)],nrows=50)
+    artist_list = df['Artist'].values.tolist()
+    artist_urls = df['Search'].values.tolist()
+
+    Names = []
+    URLs = []
+    IDs = []
+    Bio = []
+
+    for link in artist_urls:
+        url = "https://www.allmusic.com/search/artists/"+link
+
+        # create an HTML Session object
+        session = HTMLSession()
+
+        # Use the object above to connect to needed webpage
+        resp = session.get(url)
+
+        # Run JavaScript code on webpage
+        resp.html.render(timeout=60)
+
+        # Access the rendered data
+        soup = BeautifulSoup(resp.html.html, "lxml")
+        div = soup.find("div",attrs={'class':'name'})
+        child = div.findChild("a")
+
+        Names.append(child.text)
+        URLs.append("href: {}".format(child.get("href"))[6:])
+        IDs.append("artist_id: {}".format(child.get("data-tooltip"))[18:30])
+
+        print(len(Names))
+        print(len(URLs))
+        print(len(IDs))
+
+    df = pd.DataFrame(list(zip(Names, URLs, IDs)),
+        columns =['Name', 'URL', 'ID'])
+
+    df.to_excel("List.xlsx", sheet_name='Artist_Library')
+
+    print(df)
+
+music_scraper()
